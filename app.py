@@ -25,6 +25,8 @@ class Reserva(db.Model):
     horario = db.Column(db.Time, nullable=False)
     sala_id = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)  # Adicione o campo "username"
+    
     # Adicione outros campos conforme necessário
 
 # Configure a rota estática para servir arquivos CSS da pasta "static"
@@ -48,6 +50,8 @@ def login():
         user = User.query.filter_by(username=username, password=password).first()
         if user:
             session['user_id'] = user.id  # Salvar o ID do usuário na sessão
+            session['username'] = user.username #Armazena o username da sessão
+
             return redirect(url_for('reserva_sala'))  # Redireciona para a página de reserva após o login bem-sucedido
         else:
             flash('Credenciais incorretas', 'error')  # Mensagem de erro em caso de credenciais incorretas
@@ -78,28 +82,38 @@ def cadastrar():
 # Rota para reserva de sala
 @app.route('/reserva', methods=['GET', 'POST'])
 def reserva_sala():
+    # Verifica se o ID do usuário está na sessão
     if 'user_id' not in session:
-        return redirect(url_for('login'))  # Redireciona para o login se o usuário não estiver autenticado
+        return redirect(url_for('login'))
+
+    # Acesse o nome de usuário da sessão
+    username = session.get('username')
 
     if request.method == 'POST':
+        
         data = request.form['data']
         horario = request.form['horario']
         sala_id = request.form['sala_id']
-
+        
         # Verifique se a sala está disponível na data e horário especificados
+
+        # Capturar o nome de usuário da sessão
+        
+
         if not sala_esta_disponivel(data, horario, sala_id):
             flash('Erro: A sala já está reservada para este horário.', 'error')
         else:
             # Crie uma nova reserva associada ao usuário atual
-            nova_reserva = Reserva(data=data, horario=horario, sala_id=sala_id, user_id=session['user_id'])
+            nova_reserva = Reserva(data=data, horario=horario, sala_id=sala_id, user_id=session['user_id'], username=session['username'])
 
             # Adicione a reserva ao banco de dados
             db.session.add(nova_reserva)
             db.session.commit()
-            flash('Reserva realizada com sucesso.', 'success')
+            flash(f'Reserva realizada com sucesso para {username}.', 'success')
 
-    # Renderize o formulário de reserva
-    return render_template('reserva.html')
+    # Renderize o formulário de reserva e passe o username para o template
+    return render_template('reserva.html', username=username)
+
 
 # Função para verificar a disponibilidade da sala
 def sala_esta_disponivel(data, horario, sala_id):
