@@ -2,20 +2,16 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from flask_sqlalchemy import SQLAlchemy
 import pymysql
 from datetime import datetime
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 
 app = Flask(__name__)
-app.secret_key = 'sua_chave_secreta'
+app.secret_key = '1234567890'
 
 # Configure a conexão com o banco de dados MySQL
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:q1w2e3r4@localhost/db_sala'
 db = SQLAlchemy(app)
 
-# Configurar o Flask-Login
-login_manager = LoginManager()
-login_manager.init_app(app)
-
-class User(UserMixin, db.Model):
+# Defina a classe User para mapear a tabela de usuários no MySQL
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(80), nullable=False)
@@ -27,17 +23,10 @@ class Reserva(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     data = db.Column(db.Date, nullable=False)
     horario = db.Column(db.Time, nullable=False)
-    sala_id = db.Column(db.String(2), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    user = db.relationship('User', backref=db.backref('reservas', lazy=True))
+    sala_id = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    # Adicione outros campos conforme necessário
 
-# Crie a tabela Reserva
-with app.app_context():
-    db.create_all()
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
 # Configure a rota estática para servir arquivos CSS da pasta "static"
 @app.route('/static/<path:filename>')
 def serve_static(filename):
@@ -46,8 +35,8 @@ def serve_static(filename):
 # Rota padrão para a página inicial
 @app.route('/')
 def home():
-    if 'username' in session:
-        return 'Você está logado como ' + session['username']
+    if 'user_id' in session:
+        return 'Você está logado'
     return 'Você não está logado. <a href="/login">Faça login</a>'
 
 # Rota para login
@@ -58,7 +47,7 @@ def login():
         password = request.form['password']
         user = User.query.filter_by(username=username, password=password).first()
         if user:
-            session['username'] = username
+            session['user_id'] = user.id  # Salvar o ID do usuário na sessão
             return redirect(url_for('reserva_sala'))  # Redireciona para a página de reserva após o login bem-sucedido
         else:
             flash('Credenciais incorretas', 'error')  # Mensagem de erro em caso de credenciais incorretas
@@ -67,7 +56,7 @@ def login():
 # Rota para logout
 @app.route('/logout')
 def logout():
-    session.pop('username', None)
+    session.pop('user_id', None)
     return redirect(url_for('home'))
 
 # Rota para cadastro
@@ -89,6 +78,9 @@ def cadastrar():
 # Rota para reserva de sala
 @app.route('/reserva', methods=['GET', 'POST'])
 def reserva_sala():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))  # Redireciona para o login se o usuário não estiver autenticado
+
     if request.method == 'POST':
         data = request.form['data']
         horario = request.form['horario']
@@ -98,8 +90,8 @@ def reserva_sala():
         if not sala_esta_disponivel(data, horario, sala_id):
             flash('Erro: A sala já está reservada para este horário.', 'error')
         else:
-            # Crie uma nova reserva
-            nova_reserva = Reserva(data=data, horario=horario, sala_id=sala_id)
+            # Crie uma nova reserva associada ao usuário atual
+            nova_reserva = Reserva(data=data, horario=horario, sala_id=sala_id, user_id=session['user_id'])
 
             # Adicione a reserva ao banco de dados
             db.session.add(nova_reserva)
@@ -119,26 +111,5 @@ def sala_esta_disponivel(data, horario, sala_id):
     ).first()
     return reserva_existente is None
 
-
-@app.route('/reservar', methods=['POST'])
-@login_required  # O usuário deve estar autenticado para reservar
-def reservar():
-    if request.method == 'POST':
-        data = request.form['data']
-        horario = request.form['horario']
-        sala_id = request.form['sala_id']
-
-        # Crie uma nova reserva associando o ID do usuário autenticado
-        nova_reserva = Reserva(data=data, horario=horario, sala_id=sala_id, user_id=current_user.id)
-
-        # Adicione a reserva ao banco de dados
-        db.session.add(nova_reserva)
-        db.session.commit()
-        flash('Reserva realizada com sucesso.', 'success')
-
-    # Redirecione de volta para a página de reserva
-    return redirect(url_for('reserva_sala'))
 if __name__ == '__main__':
     app.run(debug=True)
-
-
