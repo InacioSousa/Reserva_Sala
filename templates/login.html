@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="PT-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('serve_static', filename='reset.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('serve_static', filename='style.css') }}">
+    
+    <title>Login</title>
+</head>
+<body class="corpo">
+    <section>
+        <div class="formulario">
+            <h1 class="titulo">Faça login</h1>
+            <p class="titulo-p">Não possui uma conta? <a href="/cadastrar" class="link">Cadastre-se</a></p>
+            <form method="POST" action="/login">
+                <input type="text" name="username" id="nick" placeholder="Usuário" class="input">
+                <input type="password" name="password" id="password" placeholder="Senha" class="input">
+                <button type="submit" class="botao">Entrar</button><br>
+            </form>
+        </div>
+    </section>
+</body>
+</html>

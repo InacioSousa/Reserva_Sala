@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reserva de Salas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.11.5/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.11.5/main.js"></script>
+    <script src="/static/fullcalendar/packages/core/locales/pt-br.js"></script>
+    <style>
+        #calendar {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Calendário de Reservas</h1>
+    <div id="calendar"></div>
+    <h2>Reservar Sala</h2>
+    <form method="POST" action="/reservar">
+        Data: <input type="date" id="data" name="data" required>
+        Horário: <input type="time" name="horario" required>
+        <input type="text" name="sala_id" id="sala_id" placeholder="ID da sala" required>
+        <input type="submit" value="Reservar">
+    </form>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul>
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var dataInput = document.getElementById('data');
+
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                locale: 'pt-br',
+                selectable: true, // Permite selecionar datas no calendário
+                select: function(info) {
+                    // Quando uma data é selecionada
+                    var selectedDate = info.start; // A data selecionada
+                    var formattedDate = selectedDate.toISOString().split('T')[0]; // Formata a data
+
+                    // Atualiza o campo de data no formulário
+                    dataInput.value = formattedDate;
+                }
+            });
+
+            calendar.render();
+        });
+    </script>
+</body>
+</html>
